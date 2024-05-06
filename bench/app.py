@@ -385,13 +385,13 @@ class App(AppMeta):
 		if app_path.is_dir():
 			shutil.rmtree(app_path)
 
-		click.secho(f"Getting {self.app_name} from cache", fg="yellow")
+		click.secho(f"Bench app-cache: getting {self.app_name} from cache", fg="yellow")
 		with tarfile.open(cache_path, mode) as tar:
 			extraction_filter = get_app_cache_extract_filter(count_threshold=150_000)
 			try:
 				tar.extractall(app_path.parent, filter=extraction_filter)
 			except Exception:
-				message = f"Cache extraction failed for {self.app_name}, skipping cache"
+				message = f"Bench app-cache: extraction failed for {self.app_name}, skipping cache"
 				click.secho(message, fg="yellow")
 				logger.exception(message)
 				shutil.rmtree(app_path)
@@ -411,7 +411,7 @@ class App(AppMeta):
 		cache_path = self.get_app_cache_temp_path(compress_artifacts)
 		mode = "w:gz" if compress_artifacts else "w"
 
-		message = f"Caching {self.app_name} app directory"
+		message = f"Bench app-cache: caching {self.app_name} app directory"
 		if compress_artifacts:
 			message += " (compressed)"
 		click.secho(message)
@@ -428,7 +428,7 @@ class App(AppMeta):
 
 			success = True
 		except Exception as exc:
-			log(f"Failed to cache {app_path} {exc}", level=3)
+			log(f"Bench app-cache: failed to cache {app_path} {exc}", level=3)
 			success = False
 		finally:
 			os.chdir(cwd)
@@ -501,7 +501,7 @@ def can_frappe_use_cached(app: App) -> bool:
 		"""
 		return sv.Version("15.12.0") not in sv.SimpleSpec(min_frappe)
 	except ValueError:
-		click.secho(f"Invalid value found for frappe version '{min_frappe}'", fg="yellow")
+		click.secho(f"Bench app-cache: invalid value found for frappe version '{min_frappe}'", fg="yellow")
 		# Invalid expression
 		return False
 
@@ -610,6 +610,7 @@ def remove_unused_node_modules(app_path: Path) -> None:
 			can_delete = "vite build" in build_script
 
 		if can_delete:
+			click.secho(f"Bench app-cache: removing {node_modules.as_posix()}")
 			shutil.rmtree(node_modules)
 
 
