@@ -421,7 +421,7 @@ class App(AppMeta):
 
 			cache_path.rename(hashed_path)
 			click.secho(
-				f"Bench app-cache: caching succeeded for {self.app_name} into {hashed_path.as_posix()}",
+				f"Bench app-cache: caching succeeded for {self.app_name} as {hashed_path.as_posix()}",
 				fg="green",
 			)
 
