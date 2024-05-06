@@ -346,7 +346,7 @@ class App(AppMeta):
 		tarfile_name = f"{self.app_name}.{uuid.uuid4().hex}.{ext}"
 		return cache_path / tarfile_name
 
-	def get_app_cache_hashed_name(self, temp_path: Path) -> Path:
+	def get_app_cache_hashed_path(self, temp_path: Path) -> Path:
 		assert self.cache_key is not None
 
 		ext = temp_path.suffix[1:]
@@ -355,44 +355,11 @@ class App(AppMeta):
 
 		return temp_path.with_name(tarfile_name)
 
-	def get_app_cache_path(self) -> "Optional[Path]":
-		assert self.cache_key is not None
-
-		cache_path = get_bench_cache_path("apps")
-		glob_pattern = f"{self.app_name}.{self.cache_key}.md5-*"
-
-		for app_cache_path in cache_path.glob(glob_pattern):
-			return app_cache_path
-
-		return None
-
-	def validate_cache_and_get_path(self) -> "Optional[Path]":
-		if not self.cache_key:
-			return
-
-		if not (cache_path := self.get_app_cache_path()):
-			return
-
-		if not cache_path.is_file():
-			click.secho(
-				f"Bench app-cache: file check failed for {cache_path.as_posix()}, skipping cache",
-				fg="yellow",
-			)
-			unlink_no_throw(cache_path)
-			return
-
-		if not is_cache_hash_valid(cache_path):
-			click.secho(
-				f"Bench app-cache: hash validation failed for {cache_path.as_posix()}, skipping cache",
-				fg="yellow",
-			)
-			unlink_no_throw(cache_path)
-			return
-
-		return cache_path
-
 	def get_cached(self) -> bool:
-		if not (cache_path := self.validate_cache_and_get_path()):
+		if not self.cache_key:
+			return False
+
+		if not (cache_path := validate_cache_and_get_path(self.app_name, self.cache_key)):
 			return False
 
 		app_path = self.get_app_path()
@@ -443,7 +410,7 @@ class App(AppMeta):
 			with tarfile.open(cache_path, mode) as tar:
 				tar.add(app_path.name)
 
-			hashed_path = self.get_app_cache_hashed_name(cache_path)
+			hashed_path = self.get_app_cache_hashed_path(cache_path)
 			unlink_no_throw(hashed_path)
 
 			cache_path.rename(hashed_path)
@@ -478,28 +445,11 @@ def can_get_cached(app_name: str, cache_key: str) -> bool:
 	checking local remote and fetching can be skipped while keeping
 	get-app command params the same.
 	"""
-	cache_path = get_bench_cache_path("apps")
-	tarfile_path = cache_path / get_cache_filename(
-		app_name,
-		cache_key,
-		True,
-	)
 
-	if tarfile_path.is_file():
-		return True
+	if cache_path := get_app_cache_path(app_name, cache_key):
+		return cache_path.exists()
 
-	tarfile_path = cache_path / get_cache_filename(
-		app_name,
-		cache_key,
-		False,
-	)
-
-	return tarfile_path.is_file()
-
-
-def get_cache_filename(app_name: str, cache_key: str, is_compressed=False):
-	ext = "tgz" if is_compressed else "tar"
-	return f"{app_name}-{cache_key[:10]}.{ext}"
+	return False
 
 
 def can_frappe_use_cached(app: App) -> bool:
@@ -1100,3 +1050,39 @@ def unlink_no_throw(path: Path):
 		path.unlink(True)
 	except Exception:
 		pass
+
+
+def get_app_cache_path(app_name: str, cache_key: str) -> "Optional[Path]":
+	cache_path = get_bench_cache_path("apps")
+	glob_pattern = f"{app_name}.{cache_key}.md5-*"
+
+	for app_cache_path in cache_path.glob(glob_pattern):
+		return app_cache_path
+
+	return None
+
+
+def validate_cache_and_get_path(app_name: str, cache_key: str) -> "Optional[Path]":
+	if not cache_key:
+		return
+
+	if not (cache_path := get_app_cache_path(app_name, cache_key)):
+		return
+
+	if not cache_path.is_file():
+		click.secho(
+			f"Bench app-cache: file check failed for {cache_path.as_posix()}, skipping cache",
+			fg="yellow",
+		)
+		unlink_no_throw(cache_path)
+		return
+
+	if not is_cache_hash_valid(cache_path):
+		click.secho(
+			f"Bench app-cache: hash validation failed for {cache_path.as_posix()}, skipping cache",
+			fg="yellow",
+		)
+		unlink_no_throw(cache_path)
+		return
+
+	return cache_path
