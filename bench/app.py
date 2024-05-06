@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import sys
+import uuid
 import tarfile
 import typing
 from collections import OrderedDict
@@ -34,6 +35,7 @@ from bench.utils import (
 	is_valid_frappe_branch,
 	log,
 	run_frappe_cmd,
+	get_file_md5,
 )
 from bench.utils.bench import build_assets, install_python_dev_dependencies
 from bench.utils.render import step
@@ -338,6 +340,20 @@ class App(AppMeta):
 	def get_app_path(self) -> Path:
 		return Path(self.bench.name) / "apps" / self.app_name
 
+	def get_app_cache_temp_path(self, is_compressed=False) -> Path:
+		cache_path = get_bench_cache_path("apps")
+		ext = "tgz" if is_compressed else "tar"
+		tarfile_name = f"{self.app_name}.{uuid.uuid4().hex}.{ext}"
+		return cache_path / tarfile_name
+
+	def get_app_cache_hashed_name(self, temp_path: Path) -> Path:
+		assert self.cache_key is not None
+
+		ext = temp_path.suffix[1:]
+		md5 = get_file_md5(temp_path.as_posix())
+		tarfile_name = f"{self.app_name}.{self.cache_key}.md5-{md5}.{ext}"
+		return temp_path.with_name(tarfile_name)
+
 	def get_app_cache_path(self, is_compressed=False) -> Path:
 		assert self.cache_key is not None
 
@@ -392,7 +408,7 @@ class App(AppMeta):
 			return False
 
 		cwd = os.getcwd()
-		cache_path = self.get_app_cache_path(compress_artifacts)
+		cache_path = self.get_app_cache_temp_path(compress_artifacts)
 		mode = "w:gz" if compress_artifacts else "w"
 
 		message = f"Caching {self.app_name} app directory"
@@ -407,9 +423,12 @@ class App(AppMeta):
 		try:
 			with tarfile.open(cache_path, mode) as tar:
 				tar.add(app_path.name)
+			hashed_path = self.get_app_cache_hashed_name(cache_path)
+			cache_path.rename(hashed_path)
+
 			success = True
-		except Exception:
-			log(f"Failed to cache {app_path}", level=3)
+		except Exception as exc:
+			log(f"Failed to cache {app_path} {exc}", level=3)
 			success = False
 		finally:
 			os.chdir(cwd)

@@ -5,6 +5,7 @@ import os
 import re
 import subprocess
 import sys
+import hashlib
 from functools import lru_cache
 from glob import glob
 from pathlib import Path
@@ -22,6 +23,12 @@ from bench.exceptions import (
 	CommandFailedError,
 	InvalidRemoteException,
 )
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+	from typing import Optional
+
 
 logger = logging.getLogger(PROJECT_NAME)
 paths_in_app = ("hooks.py", "modules.txt", "patches.txt")
@@ -605,3 +612,10 @@ def get_app_cache_extract_filter(
 			return None
 
 	return filter_function
+
+def get_file_md5(p: str) -> "str":
+	with open(p, "rb") as f:
+		file_md5 = hashlib.md5()
+		while chunk := f.read(2**16):
+			file_md5.update(chunk)
+	return file_md5.hexdigest()
