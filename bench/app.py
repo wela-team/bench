@@ -366,15 +366,21 @@ class App(AppMeta):
 		if app_path.is_dir():
 			shutil.rmtree(app_path)
 
-		click.secho(f"Bench app-cache: getting {self.app_name} from cache", fg="yellow")
+		click.secho(
+			f"Bench app-cache: extracting {self.app_name} from {cache_path.as_posix()}",
+		)
 
 		mode = "r:gz" if cache_path.suffix.endswith(".tgz") else "r"
 		with tarfile.open(cache_path, mode) as tar:
 			extraction_filter = get_app_cache_extract_filter(count_threshold=150_000)
 			try:
 				tar.extractall(app_path.parent, filter=extraction_filter)
+				click.secho(
+					f"Bench app-cache: extraction succeeded for {self.app_name}",
+					fg="green",
+				)
 			except Exception:
-				message = f"Bench app-cache: extraction failed for {self.app_name}, skipping cache"
+				message = f"Bench app-cache: extraction failed for {self.app_name}"
 				click.secho(
 					message,
 					fg="yellow",
@@ -397,7 +403,7 @@ class App(AppMeta):
 		cache_path = self.get_app_cache_temp_path(compress_artifacts)
 		mode = "w:gz" if compress_artifacts else "w"
 
-		message = f"Bench app-cache: caching {self.app_name} app directory"
+		message = f"Bench app-cache: caching {self.app_name}"
 		if compress_artifacts:
 			message += " (compressed)"
 		click.secho(message)
@@ -414,10 +420,14 @@ class App(AppMeta):
 			unlink_no_throw(hashed_path)
 
 			cache_path.rename(hashed_path)
+			click.secho(
+				f"Bench app-cache: caching succeeded for {self.app_name} into {hashed_path.as_posix()}",
+				fg="green",
+			)
 
 			success = True
 		except Exception as exc:
-			log(f"Bench app-cache: failed to cache {app_path} {exc}", level=3)
+			log(f"Bench app-cache: caching failed for {self.app_name} {exc}", level=3)
 			success = False
 		finally:
 			os.chdir(cwd)
