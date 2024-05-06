@@ -595,7 +595,10 @@ def remove_unused_node_modules(app_path: Path) -> None:
 			can_delete = "vite build" in build_script
 
 		if can_delete:
-			click.secho(f"Bench app-cache: removing {node_modules.as_posix()}")
+			click.secho(
+				f"Bench app-cache: removing {node_modules.as_posix()}",
+				fg="yellow",
+			)
 			shutil.rmtree(node_modules)
 
 
