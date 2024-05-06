@@ -613,8 +613,8 @@ def get_app_cache_extract_filter(
 
 	return filter_function
 
-def get_file_md5(p: str) -> "str":
-	with open(p, "rb") as f:
+def get_file_md5(p: Path) -> "str":
+	with open(p.as_posix(), "rb") as f:
 		file_md5 = hashlib.md5()
 		while chunk := f.read(2**16):
 			file_md5.update(chunk)

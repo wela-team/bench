@@ -350,35 +350,49 @@ class App(AppMeta):
 		assert self.cache_key is not None
 
 		ext = temp_path.suffix[1:]
-		md5 = get_file_md5(temp_path.as_posix())
+		md5 = get_file_md5(temp_path)
 		tarfile_name = f"{self.app_name}.{self.cache_key}.md5-{md5}.{ext}"
+
 		return temp_path.with_name(tarfile_name)
 
-	def get_app_cache_path(self, is_compressed=False) -> Path:
+	def get_app_cache_path(self) -> "Optional[Path]":
 		assert self.cache_key is not None
 
 		cache_path = get_bench_cache_path("apps")
-		tarfile_name = get_cache_filename(
-			self.app_name,
-			self.cache_key,
-			is_compressed,
-		)
-		return cache_path / tarfile_name
+		glob_pattern = f"{self.app_name}.{self.cache_key}.md5-*"
+
+		for app_cache_path in cache_path.glob(glob_pattern):
+			return app_cache_path
+
+		return None
+
+	def validate_cache_and_get_path(self) -> "Optional[Path]":
+		if not self.cache_key:
+			return
+
+		if not (cache_path := self.get_app_cache_path()):
+			return
+
+		if not cache_path.is_file():
+			click.secho(
+				f"Bench app-cache: file check failed for {cache_path.as_posix()}, skipping cache",
+				fg="yellow",
+			)
+			unlink_no_throw(cache_path)
+			return
+
+		if not is_cache_hash_valid(cache_path):
+			click.secho(
+				f"Bench app-cache: hash validation failed for {cache_path.as_posix()}, skipping cache",
+				fg="yellow",
+			)
+			unlink_no_throw(cache_path)
+			return
+
+		return cache_path
 
 	def get_cached(self) -> bool:
-		if not self.cache_key:
-			return False
-
-		cache_path = self.get_app_cache_path(False)
-		mode = "r"
-
-		# Check if cache exists without gzip
-		if not cache_path.is_file():
-			cache_path = self.get_app_cache_path(True)
-			mode = "r:gz"
-
-		# Check if cache exists with gzip
-		if not cache_path.is_file():
+		if not (cache_path := self.validate_cache_and_get_path()):
 			return False
 
 		app_path = self.get_app_path()
@@ -386,13 +400,18 @@ class App(AppMeta):
 			shutil.rmtree(app_path)
 
 		click.secho(f"Bench app-cache: getting {self.app_name} from cache", fg="yellow")
+
+		mode = "r:gz" if cache_path.suffix.endswith(".tgz") else "r"
 		with tarfile.open(cache_path, mode) as tar:
 			extraction_filter = get_app_cache_extract_filter(count_threshold=150_000)
 			try:
 				tar.extractall(app_path.parent, filter=extraction_filter)
 			except Exception:
 				message = f"Bench app-cache: extraction failed for {self.app_name}, skipping cache"
-				click.secho(message, fg="yellow")
+				click.secho(
+					message,
+					fg="yellow",
+				)
 				logger.exception(message)
 				shutil.rmtree(app_path)
 				return False
@@ -423,7 +442,10 @@ class App(AppMeta):
 		try:
 			with tarfile.open(cache_path, mode) as tar:
 				tar.add(app_path.name)
+
 			hashed_path = self.get_app_cache_hashed_name(cache_path)
+			unlink_no_throw(hashed_path)
+
 			cache_path.rename(hashed_path)
 
 			success = True
@@ -501,7 +523,10 @@ def can_frappe_use_cached(app: App) -> bool:
 		"""
 		return sv.Version("15.12.0") not in sv.SimpleSpec(min_frappe)
 	except ValueError:
-		click.secho(f"Bench app-cache: invalid value found for frappe version '{min_frappe}'", fg="yellow")
+		click.secho(
+			f"Bench app-cache: invalid value found for frappe version '{min_frappe}'",
+			fg="yellow",
+		)
 		# Invalid expression
 		return False
 
@@ -1056,3 +1081,22 @@ def get_apps_json(path):
 
 	with open(path) as f:
 		return json.load(f)
+
+
+def is_cache_hash_valid(cache_path: Path) -> bool:
+	parts = cache_path.name.split(".")
+	if len(parts) < 2 or not parts[-2].startswith("md5-"):
+		return False
+
+	md5 = parts[-2].split("-")[1]
+	return get_file_md5(cache_path) == md5
+
+
+def unlink_no_throw(path: Path):
+	if not path.exists():
+		return
+
+	try:
+		path.unlink(True)
+	except Exception:
+		pass
