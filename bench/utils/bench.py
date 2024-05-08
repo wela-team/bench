@@ -688,7 +688,7 @@ def cache_list() -> None:
 		created = datetime.fromtimestamp(stat.st_ctime)
 		accessed = datetime.fromtimestamp(stat.st_atime)
 
-		app = item.name.split("-")[0]
+		app = item.name.split(".")[0]
 		tot_items += 1
 		tot_size += stat.st_size
 		compressed = item.suffix == ".tgz"
@@ -696,7 +696,7 @@ def cache_list() -> None:
 		if not printed_header:
 			click.echo(
 				f"{'APP':15}  "
-				f"{'FILE':25}  "
+				f"{'FILE':90}  "
 				f"{'SIZE':>13}  "
 				f"{'COMPRESSED'}  "
 				f"{'CREATED':19}  "
@@ -706,7 +706,7 @@ def cache_list() -> None:
 
 		click.echo(
 			f"{app:15}  "
-			f"{item.name:25}  "
+			f"{item.name:90}  "
 			f"{size_mb:10.3f} MB  "
 			f"{str(compressed):10}  "
 			f"{created:%Y-%m-%d %H:%M:%S}  "
