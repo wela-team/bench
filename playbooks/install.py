@@ -247,7 +247,7 @@ def install_bench(args):
 def clone_bench_repo(args):
 	'''Clones the bench repository in the user folder'''
 	branch = args.bench_branch or 'master'
-	repo_url = args.repo_url or 'https://github.com/frappe/bench'
+	repo_url = args.repo_url or 'https://github.com/wela-team/bench'
 
 	if os.path.exists(tmp_bench_repo):
 		return 0
