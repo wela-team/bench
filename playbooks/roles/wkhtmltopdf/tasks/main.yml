@@ -20,6 +20,13 @@
     force: yes
   when: ansible_os_family == 'Debian'
 
+- name: download wkthmltox Ubuntu 20
+  get_url:
+    url: https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6-1/wkhtmltox_0.12.6-1.focal_amd64.deb
+    dest: /tmp/wkhtmltox.deb
+    checksum: "sha256: ad0264869fe40ccfb91c32e9be7318bfabf3864f6a8a15567f7a38afe4a9a932"
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_major_version == '20'
+
 - name: download wkthmltox Ubuntu 18
   get_url:
     url: https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.5/wkhtmltox_0.12.5-1.bionic_{{ "amd64" if ansible_architecture == "x86_64" else "i386"}}.deb
