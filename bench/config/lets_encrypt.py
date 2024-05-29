@@ -54,11 +54,11 @@ def create_config(site, custom_domain):
 
 def run_certbot_and_setup_ssl(site, custom_domain, bench_path, interactive=True):
 	service('nginx', 'stop')
-	get_certbot()
+	# get_certbot()
 
 	try:
 		interactive = '' if interactive else '-n'
-		exec_cmd("{path} {interactive} --config /etc/letsencrypt/configs/{site}.cfg certonly".format(path=get_certbot_path(), interactive=interactive, site=custom_domain or site))
+		exec_cmd("{path} {interactive} --standalone -d {site}".format(path=get_certbot_path(), interactive=interactive, site=custom_domain or site))
 	except CommandFailedError:
 		service('nginx', 'start')
 		print("There was a problem trying to setup SSL for your site")
@@ -95,7 +95,7 @@ def create_dir_if_missing(path):
 		os.makedirs(os.path.dirname(path))
 
 
-def get_certbot():
+# def get_certbot():
 	certbot_path = get_certbot_path()
 	create_dir_if_missing(certbot_path)
 
@@ -105,7 +105,7 @@ def get_certbot():
 
 
 def get_certbot_path():
-	return "/opt/certbot-auto"
+	return "/usr/bin/certbot"
 
 
 def renew_certs():
