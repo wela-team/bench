@@ -95,7 +95,7 @@ def create_dir_if_missing(path):
 		os.makedirs(os.path.dirname(path))
 
 
-# def get_certbot():
+def get_certbot():
 	certbot_path = get_certbot_path()
 	create_dir_if_missing(certbot_path)
 
@@ -139,7 +139,7 @@ def setup_wildcard_ssl(domain, email, bench_path, exclude_base_domain):
 		print("You cannot setup SSL without DNS Multitenancy")
 		return
 
-	get_certbot()
+	# get_certbot()
 	domain_list = _get_domains(domain.strip())
 
 	email_param = ''
