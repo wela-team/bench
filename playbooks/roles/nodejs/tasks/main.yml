@@ -6,7 +6,7 @@
   when: ansible_os_family == "RedHat"
 
 - name: Install yarn
-  : npm install -g yarn
+  command: npm install -g yarn
   become: yes
   become_user: root
 ...
