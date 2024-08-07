@@ -17,6 +17,9 @@
         group: '{{ frappe_user }}'
         recurse: yes
 
+    - name: Set ssh folder perms
+      shell: "chmod 700 /home/{{ frappe_user }}/.ssh && chmod 600 /home/{{ frappe_user }}/.ssh/id_rsa && chmod 644 /home/{{ frappe_user }}/.ssh/id_rsa.pub"
+
     - name: Set /tmp/.bench folder perms
       file:
         path: '{{ repo_path }}'
